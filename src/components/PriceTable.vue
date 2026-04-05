@@ -2,7 +2,7 @@
   <v-card class="mb-4" variant="tonal">
     <v-card-title>Price</v-card-title>
     <v-card-text>
-      <div class="checkbox-row mb-2">
+      <div class="controls-row mb-2">
         <label class="remove-dye-option" for="remove-dye-checkbox">
           <input
             id="remove-dye-checkbox"
@@ -12,7 +12,22 @@
           />
           <span>Remove dye</span>
         </label>
+
+        <v-text-field
+          label="Margin"
+          :model-value="marginInput"
+          placeholder="10 or 10%"
+          density="comfortable"
+          variant="outlined"
+          hide-details
+          class="margin-input"
+          @update:model-value="onUpdateMarginInput"
+        />
       </div>
+
+      <v-alert v-if="marginRule.error" type="error" variant="tonal" density="comfortable" class="mb-2">
+        {{ marginRule.error }}
+      </v-alert>
 
       <div class="price-actions mb-3">
         <div class="left-actions">
@@ -28,13 +43,11 @@
           <tr>
             <th>Id</th>
             <th>Name</th>
-            <th>Required Qty</th>
-            <th>Fulfilled Qty</th>
-            <th>Remaining Qty</th>
-            <th>Unit Price Avg</th>
+            <th>Qty</th>
+            <th>Avg Price</th>
             <th>Total Cost</th>
-            <th>Last Upload Time</th>
             <th>Plan (Low to High)</th>
+            <th>Last Upload Time</th>
           </tr>
         </thead>
         <tbody>
@@ -42,24 +55,22 @@
             <td>{{ row.itemId }}</td>
             <td>{{ row.itemName }}</td>
             <td>{{ row.requiredQuantity }}</td>
-            <td>{{ row.fulfilledQuantity }}</td>
-            <td>{{ row.remainingQuantity }}</td>
-            <td>{{ row.averageUnitPrice }}</td>
-            <td>{{ row.totalCost }}</td>
-            <td>{{ row.lastUploadTime }}</td>
+            <td>{{ formatPrice(getAdjustedAveragePrice(row)) }}</td>
+            <td>{{ formatPrice(getAdjustedTotalCost(row)) }}</td>
             <td>
               <div v-if="row.purchasePlanRows?.length" class="plan-rows">
                 <div v-for="(pick, pickIndex) in row.purchasePlanRows" :key="`${row.itemId}-${index}-${pickIndex}`">
-                  {{ pick.quantity }} x {{ pick.pricePerUnit }}
+                  {{ pick.quantity }} x {{ formatPrice(getAdjustedPlanUnitPrice(pick)) }}
                   <span v-if="pick.worldName">@{{ pick.worldName }}</span>
-                  = {{ pick.subtotal }}
+                  = {{ formatPrice(getAdjustedPlanSubtotal(pick)) }}
                 </div>
               </div>
               <span v-else>-</span>
             </td>
+            <td>{{ row.lastUploadTime }}</td>
           </tr>
           <tr v-if="rows.length === 0">
-            <td colspan="9">No prices loaded.</td>
+            <td colspan="7">No prices loaded.</td>
           </tr>
         </tbody>
       </v-table>
@@ -68,13 +79,12 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['get-prices', 'export-price-csv', 'update:removeDyeForPricing'])
+import { computed } from 'vue'
+import { adjustTotalCost, adjustUnitPrice, parsePriceMarginInput } from '@/utils/pricingMargin'
 
-function onToggleRemoveDye(value) {
-  emit('update:removeDyeForPricing', Boolean(value))
-}
+const emit = defineEmits(['get-prices', 'export-price-csv', 'update:removeDyeForPricing', 'update:marginInput'])
 
-defineProps({
+const props = defineProps({
   rows: {
     type: Array,
     default: () => []
@@ -90,14 +100,56 @@ defineProps({
   removeDyeForPricing: {
     type: Boolean,
     default: false
+  },
+  marginInput: {
+    type: String,
+    default: '5%'
   }
 })
+
+const marginRule = computed(() => parsePriceMarginInput(props.marginInput))
+
+function onToggleRemoveDye(value) {
+  emit('update:removeDyeForPricing', Boolean(value))
+}
+
+function onUpdateMarginInput(value) {
+  emit('update:marginInput', String(value ?? ''))
+}
+
+function getAdjustedAveragePrice(row) {
+  return adjustUnitPrice(row?.averageUnitPrice, marginRule.value)
+}
+
+function getAdjustedTotalCost(row) {
+  const quantity = Number(row?.fulfilledQuantity || row?.requiredQuantity || 0)
+  return adjustTotalCost(row?.totalCost, quantity, marginRule.value)
+}
+
+function getAdjustedPlanUnitPrice(planRow) {
+  return adjustUnitPrice(planRow?.pricePerUnit, marginRule.value)
+}
+
+function getAdjustedPlanSubtotal(planRow) {
+  return adjustTotalCost(planRow?.subtotal, planRow?.quantity, marginRule.value)
+}
+
+function formatPrice(value) {
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) {
+    return '-'
+  }
+
+  return amount.toFixed(2)
+}
 </script>
 
 <style scoped>
-.checkbox-row {
+.controls-row {
   display: flex;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .remove-dye-option {
@@ -114,6 +166,11 @@ defineProps({
   height: 16px;
   margin: 0;
   cursor: pointer;
+}
+
+.margin-input {
+  min-width: 220px;
+  max-width: 260px;
 }
 
 .price-actions {

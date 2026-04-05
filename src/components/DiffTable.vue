@@ -3,7 +3,17 @@
     <v-card-title>Compare Result (A vs B)</v-card-title>
     <v-card-text>
 
-    <h4>Added ({{ result.added.length }}) - Total quantity: {{ getTotalQuantity(result.added, 'quantity') }}</h4>
+    <div class="section-header">
+      <h4>Added ({{ result.added.length }}) - Total quantity: {{ getTotalQuantity(result.added, 'quantity') }}</h4>
+      <v-btn
+        color="secondary"
+        size="small"
+        :disabled="disableTeamcraftButton || result.added.length === 0"
+        @click="$emit('export-teamcraft-added')"
+      >
+        Export Teamcraft
+      </v-btn>
+    </div>
     <v-table density="compact" class="table-wrap">
         <thead>
           <tr>
@@ -70,6 +80,8 @@
 </template>
 
 <script setup>
+defineEmits(['export-teamcraft-added'])
+
 function getTotalQuantity(items, key) {
   return items.reduce((sum, item) => sum + Number(item[key] || 0), 0)
 }
@@ -82,6 +94,24 @@ defineProps({
       removed: [],
       quantityChanged: []
     })
+  },
+  disableTeamcraftButton: {
+    type: Boolean,
+    default: false
   }
 })
 </script>
+
+<style scoped>
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.section-header h4 {
+  margin: 0;
+}
+</style>

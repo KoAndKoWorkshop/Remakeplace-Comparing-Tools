@@ -5,6 +5,7 @@ import { toTeamcraftImportUrl } from '@/modules/export/teamcraft'
 import { fetchUniversalisPrices } from '@/modules/pricing/universalis'
 import { readJsonFile } from '@/utils/file'
 import { downloadCsv } from '@/utils/download'
+import { adjustTotalCost, adjustUnitPrice, parsePriceMarginInput } from '@/utils/pricingMargin'
 import npcItems from '@/data/npcitem.json'
 import dyes from '@/data/dye.json'
 
@@ -14,6 +15,15 @@ function wait(ms) {
 
 function normalizeNpcName(name) {
   return String(name || '').trim().toLowerCase()
+}
+
+function formatPriceTwoDigits(value) {
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) {
+    return '0.00'
+  }
+
+  return amount.toFixed(2)
 }
 
 const npcItemPriceByName = new Map(
@@ -57,6 +67,7 @@ export const useMainStore = defineStore('main', {
     },
     selectedServer: '',
     removeDyeForPricing: false,
+    priceMarginInput: '5%',
     priceRows: [],
     loading: false,
     error: '',
@@ -75,6 +86,7 @@ export const useMainStore = defineStore('main', {
       }
       this.selectedServer = ''
       this.removeDyeForPricing = false
+      this.priceMarginInput = '5%'
       this.priceRows = []
       this.loading = false
       this.error = ''
@@ -132,10 +144,11 @@ export const useMainStore = defineStore('main', {
           throw new Error('No items to export to Teamcraft.')
         }
 
-        const newTab = window.open(importUrl, '_blank', 'noopener,noreferrer')
-        if (!newTab) {
-          throw new Error('Could not open a new tab. Please allow pop-ups for this site and try again.')
-        }
+        const anchor = document.createElement('a')
+        anchor.href = importUrl
+        anchor.target = '_blank'
+        anchor.rel = 'noopener noreferrer'
+        anchor.click()
       } catch (error) {
         this.error = error.message || 'Failed to open Teamcraft import link.'
       }
@@ -143,17 +156,26 @@ export const useMainStore = defineStore('main', {
     exportPricePlanCsv() {
       try {
         this.clearError()
+        const marginRule = parsePriceMarginInput(this.priceMarginInput)
+        if (!marginRule.isValid) {
+          throw new Error(marginRule.error)
+        }
 
-        const lines = [['Item Name', 'Quantity', 'Price Per Unit', 'Total Price']]
+        const lines = [['Item Name', 'Quantity', 'Price Per Unit', 'Total Price', 'Location']]
 
         for (const row of this.priceRows) {
           const planRows = Array.isArray(row?.purchasePlanRows) ? row.purchasePlanRows : []
           for (const plan of planRows) {
+            const location = String(plan.worldName || this.selectedServer || '').trim()
+            const adjustedUnitPrice = adjustUnitPrice(plan.pricePerUnit, marginRule)
+            const adjustedSubtotal = adjustTotalCost(plan.subtotal, plan.quantity, marginRule)
+
             lines.push([
               row.itemName || '',
               Number(plan.quantity || 0),
-              Number(plan.pricePerUnit || 0),
-              Number(plan.subtotal || 0)
+              formatPriceTwoDigits(adjustedUnitPrice),
+              formatPriceTwoDigits(adjustedSubtotal),
+              location
             ])
           }
         }

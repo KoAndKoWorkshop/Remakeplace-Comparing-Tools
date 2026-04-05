@@ -33,7 +33,7 @@
               @update:model-value="onServerSelect"
             />
 
-            <v-btn block color="secondary" variant="outlined" class="mt-2" @click="resetPage">
+            <v-btn v-if="hasFileA" block color="error" variant="outlined" class="mt-2" @click="resetPage">
               Reset All
             </v-btn>
 
@@ -92,6 +92,7 @@
               :loading="store.loading"
               :can-get-prices="canGetPricesA"
               v-model:remove-dye-for-pricing="store.removeDyeForPricing"
+              v-model:margin-input="store.priceMarginInput"
               @get-prices="store.fetchPricesProcessing()"
               @export-price-csv="store.exportPricePlanCsv()"
             />
@@ -100,17 +101,23 @@
           <v-window-item value="advanced">
             <NormalizedTable
               v-if="hasFileB"
-              title="Item List (Added)"
-              :rows="store.compareResult.added"
+              title="Item List (B)"
+              :rows="store.normalizedB"
               :disable-teamcraft-button="store.loading"
-              @export-teamcraft="store.exportTeamcraft(store.compareResult.added)"
+              @export-teamcraft="store.exportTeamcraft(store.normalizedB)"
             />
-            <DiffTable v-if="hasFileB" :result="store.compareResult" />
+            <DiffTable
+              v-if="hasFileB"
+              :result="store.compareResult"
+              :disable-teamcraft-button="store.loading"
+              @export-teamcraft-added="store.exportTeamcraft(store.compareResult.added)"
+            />
             <PriceTable
               :rows="store.priceRows"
               :loading="store.loading"
               :can-get-prices="canGetPricesCompare"
               v-model:remove-dye-for-pricing="store.removeDyeForPricing"
+              v-model:margin-input="store.priceMarginInput"
               @get-prices="store.fetchPricesAdvanced()"
               @export-price-csv="store.exportPricePlanCsv()"
             />
