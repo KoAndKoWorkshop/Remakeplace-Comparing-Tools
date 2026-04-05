@@ -63,6 +63,23 @@ export const useMainStore = defineStore('main', {
     notice: ''
   }),
   actions: {
+    resetState() {
+      this.rawA = null
+      this.rawB = null
+      this.normalizedA = []
+      this.normalizedB = []
+      this.compareResult = {
+        added: [],
+        removed: [],
+        quantityChanged: []
+      }
+      this.selectedServer = ''
+      this.removeDyeForPricing = false
+      this.priceRows = []
+      this.loading = false
+      this.error = ''
+      this.notice = ''
+    },
     clearError() {
       this.error = ''
     },
@@ -117,7 +134,7 @@ export const useMainStore = defineStore('main', {
 
         const newTab = window.open(importUrl, '_blank', 'noopener,noreferrer')
         if (!newTab) {
-          window.location.assign(importUrl)
+          throw new Error('Could not open a new tab. Please allow pop-ups for this site and try again.')
         }
       } catch (error) {
         this.error = error.message || 'Failed to open Teamcraft import link.'

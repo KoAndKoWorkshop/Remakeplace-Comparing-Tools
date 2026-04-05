@@ -7,7 +7,7 @@
             <img class="brand-logo" :src="kokoLogo" alt="Ko&Ko Workshop logo" />
             <h1 class="left-title">Ko&Ko Workshop Tools</h1>
 
-            <FileUploadCard title="Import JSON (A)" :file-name="fileAName" @selected="onPickA" />
+            <FileUploadCard :key="`file-a-${fileInputResetKey}`" title="Import JSON (A)" :file-name="fileAName" @selected="onPickA" />
 
             <v-select
               v-model="selectedRegion"
@@ -32,6 +32,10 @@
               :disabled="!selectedRegion"
               @update:model-value="onServerSelect"
             />
+
+            <v-btn block color="secondary" variant="outlined" class="mt-2" @click="resetPage">
+              Reset All
+            </v-btn>
 
             <v-alert v-if="hasFileA" type="success" variant="tonal" density="comfortable" class="mt-2">
               File A loaded: {{ fileAName }}
@@ -60,7 +64,7 @@
 
             <v-row v-if="activeTab === 'advanced'">
               <v-col cols="12">
-                <FileUploadCard title="Import Second JSON (B)" :file-name="fileBName" @selected="onPickB" />
+                <FileUploadCard :key="`file-b-${fileInputResetKey}`" title="Import Second JSON (B)" :file-name="fileBName" @selected="onPickB" />
               </v-col>
               <v-col cols="12" class="d-flex flex-wrap ga-2">
                 <v-btn color="primary" :disabled="!hasFileB" @click="processCompare">Process</v-btn>
@@ -143,6 +147,7 @@ const fileBName = ref('')
 const activeTab = ref('processing')
 const selectedRegion = ref('')
 const selectedDatacenter = ref('')
+const fileInputResetKey = ref(0)
 const hasFileA = computed(() => !!store.rawA)
 const hasFileB = computed(() => !!store.rawB)
 const canGetPricesA = computed(() => store.normalizedA.length > 0)
@@ -204,6 +209,16 @@ async function onPickB(file) {
 function onServerSelect(value) {
   selectedDatacenter.value = value || ''
   store.selectedServer = value || ''
+}
+
+function resetPage() {
+  fileAName.value = ''
+  fileBName.value = ''
+  activeTab.value = 'processing'
+  selectedRegion.value = ''
+  selectedDatacenter.value = ''
+  fileInputResetKey.value += 1
+  store.resetState()
 }
 
 function onNoticeToggle(open) {

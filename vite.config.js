@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 export default defineConfig({
-  base: '/Remakeplace-Comparing-Tools-Web/',
+  base: '/Remakeplace-Comparing-Tools/',
   plugins: [
     vue({
       template: {
