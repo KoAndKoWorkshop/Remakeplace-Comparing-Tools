@@ -1,0 +1,16 @@
+[
+  { "region": "JP", "datacenter": "Elemental" },
+  { "region": "JP", "datacenter": "Gaia" },
+  { "region": "JP", "datacenter": "Mana" },
+  { "region": "JP", "datacenter": "Meteor" },
+
+  { "region": "NA", "datacenter": "Aether" },
+  { "region": "NA", "datacenter": "Crystal" },
+  { "region": "NA", "datacenter": "Dynamis" },
+  { "region": "NA", "datacenter": "Primal" },
+
+  { "region": "EU", "datacenter": "Chaos" },
+  { "region": "EU", "datacenter": "Light" },
+
+  { "region": "OCE", "datacenter": "Materia" }
+]
