@@ -5,7 +5,7 @@ import { toTeamcraftImportUrl } from '@/modules/export/teamcraft'
 import { fetchUniversalisPrices } from '@/modules/pricing/universalis'
 import { readJsonFile } from '@/utils/file'
 import { downloadCsv } from '@/utils/download'
-import { adjustTotalCost, adjustUnitPrice, parsePriceMarginInput } from '@/utils/pricingMargin'
+import { adjustTotalCost, adjustUnitPrice, parsePriceMarginInput, roundUp } from '@/utils/pricingMargin'
 import npcItems from '@/data/npcitem.json'
 import dyes from '@/data/dye.json'
 
@@ -18,12 +18,12 @@ function normalizeNpcName(name) {
 }
 
 function formatPriceTwoDigits(value) {
-  const amount = Number(value)
-  if (!Number.isFinite(amount)) {
-    return '0.00'
+  const amount = roundUp(value)
+  if (amount === null) {
+    return '0'
   }
 
-  return amount.toFixed(2)
+  return String(amount)
 }
 
 const npcItemPriceByName = new Map(
