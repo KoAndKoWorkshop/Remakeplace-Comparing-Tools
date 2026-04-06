@@ -116,16 +116,16 @@ export const useMainStore = defineStore('main', {
         this.error = error.message || 'Failed to load file.'
       }
     },
-    normalize(which) {
+    normalize(which, options = {}) {
       try {
         this.clearError()
 
         if (which === 'A') {
-          this.normalizedA = normalizeReMarket(this.rawA)
+          this.normalizedA = normalizeReMarket(this.rawA, options)
           return
         }
 
-        this.normalizedB = normalizeReMarket(this.rawB)
+        this.normalizedB = normalizeReMarket(this.rawB, options)
       } catch (error) {
         this.error = error.message || 'Failed to normalize data.'
       }

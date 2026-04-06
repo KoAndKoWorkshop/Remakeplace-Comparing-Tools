@@ -86,33 +86,70 @@ function addDyeItem(map, dyeId, dyeName) {
   })
 }
 
-export function normalizeReMarket(raw) {
+export function normalizeReMarket(raw, options = {}) {
+  const includeSources = new Set(Array.isArray(options?.includeSources) ? options.includeSources : [
+    'interiorFurniture',
+    'interiorFixture',
+    'exteriorFixture',
+    'exteriorFurniture',
+    'dye'
+  ])
+
   /** @type {Map<string, import('@/modules/types').NormalizedItem>} */
   const grouped = new Map()
   /** @type {Map<string, import('@/modules/types').NormalizedItem>} */
   const groupedDyes = new Map()
 
-  const furniture = Array.isArray(raw?.interiorFurniture) ? raw.interiorFurniture : []
-  for (const entry of furniture) {
-    const itemId = toNumber(entry?.itemId)
-    if (itemId === 0) {
+  const furnitureSources = [
+    {
+      key: 'interiorFurniture',
+      list: Array.isArray(raw?.interiorFurniture) ? raw.interiorFurniture : []
+    },
+    {
+      key: 'exteriorFurniture',
+      list: Array.isArray(raw?.exteriorFurniture) ? raw.exteriorFurniture : []
+    }
+  ]
+
+  for (const src of furnitureSources) {
+    if (!includeSources.has(src.key)) {
       continue
     }
 
-    const color = cleanColorRaw(entry?.properties?.color)
-    const dye = enrichDye(color)
+    for (const entry of src.list) {
+      const itemId = toNumber(entry?.itemId)
+      if (itemId === 0) {
+        continue
+      }
 
-    addGroupedItem(grouped, itemId, entry?.name || '')
-    addMaterialItem(grouped, entry)
-    addDyeItem(groupedDyes, dye.dyeId, dye.dyeName)
+      const color = cleanColorRaw(entry?.properties?.color)
+      const dye = enrichDye(color)
+
+      addGroupedItem(grouped, itemId, entry?.name || '')
+      addMaterialItem(grouped, entry)
+
+      if (includeSources.has('dye')) {
+        addDyeItem(groupedDyes, dye.dyeId, dye.dyeName)
+      }
+    }
   }
 
   const sources = [
     { key: 'interiorFixture', list: Array.isArray(raw?.interiorFixture) ? raw.interiorFixture : [] },
-    { key: 'exteriorFixture', list: Array.isArray(raw?.exteriorFixture) ? raw.exteriorFixture : [] }
+    {
+      key: 'exteriorFixture',
+      list: [
+        ...(Array.isArray(raw?.exteriorFixture) ? raw.exteriorFixture : []),
+        ...(Array.isArray(raw?.houseWalls) ? raw.houseWalls : [])
+      ]
+    }
   ]
 
   for (const src of sources) {
+    if (!includeSources.has(src.key)) {
+      continue
+    }
+
     for (const entry of src.list) {
       const itemId = toNumber(entry?.itemId)
       if (itemId === 0) {
@@ -123,7 +160,10 @@ export function normalizeReMarket(raw) {
       const dye = enrichDye(color)
 
       addGroupedItem(grouped, itemId, entry?.name || '')
-      addDyeItem(groupedDyes, dye.dyeId, dye.dyeName)
+
+      if (includeSources.has('dye')) {
+        addDyeItem(groupedDyes, dye.dyeId, dye.dyeName)
+      }
     }
   }
 

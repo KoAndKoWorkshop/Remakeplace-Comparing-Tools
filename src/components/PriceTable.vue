@@ -38,6 +38,8 @@
         </v-btn>
       </div>
 
+      <div class="total-price-summary mb-3">Total Price: {{ formatPrice(totalAdjustedPrice) }}</div>
+
       <v-table density="compact" class="table-wrap">
         <thead>
           <tr>
@@ -108,6 +110,9 @@ const props = defineProps({
 })
 
 const marginRule = computed(() => parsePriceMarginInput(props.marginInput))
+const totalAdjustedPrice = computed(() => {
+  return props.rows.reduce((sum, row) => sum + Number(getAdjustedTotalCost(row) || 0), 0)
+})
 
 function onToggleRemoveDye(value) {
   emit('update:removeDyeForPricing', Boolean(value))
@@ -198,6 +203,11 @@ function formatPrice(value) {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.total-price-summary {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .plan-rows {

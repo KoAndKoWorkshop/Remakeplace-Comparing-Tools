@@ -10,6 +10,7 @@
         variant="outlined"
         @update:model-value="onChange"
       />
+      <div v-if="helperText" class="upload-helper">{{ helperText }}</div>
       <div class="upload-name">{{ fileName || 'No file selected' }}</div>
     </v-card-text>
   </v-card>
@@ -22,6 +23,10 @@ const props = defineProps({
     required: true
   },
   fileName: {
+    type: String,
+    default: ''
+  },
+  helperText: {
     type: String,
     default: ''
   }
@@ -38,6 +43,12 @@ function onChange(value) {
 </script>
 
 <style scoped>
+.upload-helper {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9aa3b7;
+}
+
 .upload-name {
   margin-top: 6px;
   font-size: 13px;

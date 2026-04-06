@@ -57,6 +57,25 @@
             </v-tabs>
 
             <v-row v-if="activeTab === 'processing'">
+              <v-col cols="12">
+                <div class="category-filter-wrap mb-2">
+                  <div class="category-filter-title">Categories to include</div>
+                  <div class="category-filter-grid">
+                    <label
+                      v-for="option in processingCategoryOptions"
+                      :key="option.value"
+                      class="category-checkbox"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="option.value"
+                        v-model="selectedProcessingCategories"
+                      />
+                      <span>{{ option.label }}</span>
+                    </label>
+                  </div>
+                </div>
+              </v-col>
               <v-col cols="12" class="d-flex flex-wrap ga-2">
                 <v-btn color="primary" @click="processA">Process</v-btn>
               </v-col>
@@ -64,7 +83,32 @@
 
             <v-row v-if="activeTab === 'advanced'">
               <v-col cols="12">
-                <FileUploadCard :key="`file-b-${fileInputResetKey}`" title="Import Second JSON (B)" :file-name="fileBName" @selected="onPickB" />
+                <FileUploadCard
+                  :key="`file-b-${fileInputResetKey}`"
+                  title="Import Second JSON (B)"
+                  :file-name="fileBName"
+                  helper-text="*Import old JSON in A, and new JSON in B to compare the furniture and generate the list of new items you need to obtain."
+                  @selected="onPickB"
+                />
+              </v-col>
+              <v-col cols="12">
+                <div class="category-filter-wrap mb-2">
+                  <div class="category-filter-title">Categories to include</div>
+                  <div class="category-filter-grid">
+                    <label
+                      v-for="option in processingCategoryOptions"
+                      :key="`advanced-${option.value}`"
+                      class="category-checkbox"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="option.value"
+                        v-model="selectedAdvancedCategories"
+                      />
+                      <span>{{ option.label }}</span>
+                    </label>
+                  </div>
+                </div>
               </v-col>
               <v-col cols="12" class="d-flex flex-wrap ga-2">
                 <v-btn color="primary" :disabled="!hasFileB" @click="processCompare">Process</v-btn>
@@ -126,6 +170,11 @@
       </section>
     </div>
 
+    <footer class="page-footer">
+      <img class="footer-logo" :src="kokoLogo" alt="Ko&Ko Workshop logo" />
+      <p class="footer-text">This project is maintained by Ko&Ko Workshop.</p>
+    </footer>
+
     <v-snackbar
       :model-value="!!store.notice"
       color="info"
@@ -162,6 +211,16 @@ const hasFileB = computed(() => !!store.rawB)
 const canGetPricesA = computed(() => store.normalizedA.length > 0)
 const canGetPricesCompare = computed(() => store.compareResult.toAdd.length > 0)
 const canCompare = computed(() => store.normalizedA.length > 0 && store.normalizedB.length > 0)
+const processingCategoryOptions = [
+  { label: 'Interior Furniture', value: 'interiorFurniture' },
+  { label: 'Interior Fixture', value: 'interiorFixture' },
+  { label: 'Exterior Fixture / House Walls', value: 'exteriorFixture' },
+  { label: 'Exterior Furniture', value: 'exteriorFurniture' },
+  { label: 'Dye', value: 'dye' }
+]
+const allProcessingCategoryValues = processingCategoryOptions.map((option) => option.value)
+const selectedProcessingCategories = ref([...allProcessingCategoryValues])
+const selectedAdvancedCategories = ref([...allProcessingCategoryValues])
 const regionOptions = [
   { label: '--select region--', value: '' },
   { label: 'All regions', value: ALL_REGIONS_VALUE },
@@ -218,8 +277,13 @@ function processA() {
     return
   }
 
+  if (selectedProcessingCategories.value.length === 0) {
+    store.error = 'Please select at least one category before processing.'
+    return
+  }
+
   store.clearError()
-  store.normalize('A')
+  store.normalize('A', { includeSources: selectedProcessingCategories.value })
 }
 
 function processCompare() {
@@ -228,9 +292,15 @@ function processCompare() {
     return
   }
 
+  if (selectedAdvancedCategories.value.length === 0) {
+    store.error = 'Please select at least one category before processing.'
+    return
+  }
+
   store.clearError()
-  store.normalize('A')
-  store.normalize('B')
+  const normalizeOptions = { includeSources: selectedAdvancedCategories.value }
+  store.normalize('A', normalizeOptions)
+  store.normalize('B', normalizeOptions)
 }
 
 async function onPickA(file) {
@@ -269,6 +339,8 @@ function resetPage() {
   activeTab.value = 'processing'
   selectedRegion.value = ''
   selectedDatacenter.value = ''
+  selectedProcessingCategories.value = [...allProcessingCategoryValues]
+  selectedAdvancedCategories.value = [...allProcessingCategoryValues]
   fileInputResetKey.value += 1
   store.resetState()
 }
@@ -279,3 +351,63 @@ function onNoticeToggle(open) {
   }
 }
 </script>
+
+<style scoped>
+.category-filter-wrap {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.category-filter-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.category-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 12px;
+}
+
+.category-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.category-checkbox input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.page-footer {
+  margin-top: 16px;
+  padding: 12px 0 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.footer-logo {
+  height: 24px;
+  width: auto;
+  opacity: 0.9;
+}
+
+.footer-text {
+  margin: 0;
+  font-size: 13px;
+  color: #b6c0d4;
+}
+</style>
