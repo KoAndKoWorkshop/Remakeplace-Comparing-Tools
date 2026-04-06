@@ -3,6 +3,11 @@ function toFiniteNumber(value) {
   return Number.isFinite(n) ? n : null
 }
 
+export function roundUp(value) {
+  const n = toFiniteNumber(value)
+  return n === null ? null : Math.ceil(n)
+}
+
 export function parsePriceMarginInput(input) {
   const text = String(input ?? '').trim()
 

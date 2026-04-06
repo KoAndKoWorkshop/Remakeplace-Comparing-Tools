@@ -44,7 +44,7 @@
             <th>Id</th>
             <th>Name</th>
             <th>Qty</th>
-            <th>Avg Price</th>
+            <th>Lowest Price</th>
             <th>Total Cost</th>
             <th>Plan (Low to High)</th>
             <th>Last Upload Time</th>
@@ -80,7 +80,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { adjustTotalCost, adjustUnitPrice, parsePriceMarginInput } from '@/utils/pricingMargin'
+import { adjustTotalCost, adjustUnitPrice, parsePriceMarginInput, roundUp } from '@/utils/pricingMargin'
 
 const emit = defineEmits(['get-prices', 'export-price-csv', 'update:removeDyeForPricing', 'update:marginInput'])
 
@@ -118,11 +118,23 @@ function onUpdateMarginInput(value) {
 }
 
 function getAdjustedAveragePrice(row) {
-  return adjustUnitPrice(row?.averageUnitPrice, marginRule.value)
+  const lowestPlanUnitPrice = Array.isArray(row?.purchasePlanRows) && row.purchasePlanRows.length
+    ? row.purchasePlanRows[0]?.pricePerUnit
+    : null
+  const basePrice = lowestPlanUnitPrice ?? row?.minPrice ?? row?.averageUnitPrice
+  return adjustUnitPrice(basePrice, marginRule.value)
 }
 
 function getAdjustedTotalCost(row) {
   const quantity = Number(row?.fulfilledQuantity || row?.requiredQuantity || 0)
+  const lowestPlanUnitPrice = Array.isArray(row?.purchasePlanRows) && row.purchasePlanRows.length
+    ? row.purchasePlanRows[0]?.pricePerUnit
+    : null
+
+  if (Number.isFinite(Number(lowestPlanUnitPrice)) && quantity > 0) {
+    return adjustTotalCost(Number(lowestPlanUnitPrice) * quantity, quantity, marginRule.value)
+  }
+
   return adjustTotalCost(row?.totalCost, quantity, marginRule.value)
 }
 
@@ -135,12 +147,12 @@ function getAdjustedPlanSubtotal(planRow) {
 }
 
 function formatPrice(value) {
-  const amount = Number(value)
-  if (!Number.isFinite(amount)) {
+  const amount = roundUp(value)
+  if (amount === null) {
     return '-'
   }
 
-  return amount.toFixed(2)
+  return String(amount)
 }
 </script>
 

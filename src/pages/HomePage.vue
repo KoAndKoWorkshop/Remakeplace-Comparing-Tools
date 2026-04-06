@@ -110,7 +110,7 @@
               v-if="hasFileB"
               :result="store.compareResult"
               :disable-teamcraft-button="store.loading"
-              @export-teamcraft-added="store.exportTeamcraft(store.compareResult.added)"
+              @export-teamcraft-added="store.exportTeamcraft(store.compareResult.toAdd)"
             />
             <PriceTable
               :rows="store.priceRows"
@@ -155,31 +155,61 @@ const activeTab = ref('processing')
 const selectedRegion = ref('')
 const selectedDatacenter = ref('')
 const fileInputResetKey = ref(0)
+const ALL_REGIONS_VALUE = '__ALL_REGIONS__'
+const ALL_DATACENTERS_VALUE = '__ALL_DATACENTERS__'
 const hasFileA = computed(() => !!store.rawA)
 const hasFileB = computed(() => !!store.rawB)
 const canGetPricesA = computed(() => store.normalizedA.length > 0)
-const canGetPricesCompare = computed(() => store.compareResult.added.length > 0)
+const canGetPricesCompare = computed(() => store.compareResult.toAdd.length > 0)
 const canCompare = computed(() => store.normalizedA.length > 0 && store.normalizedB.length > 0)
 const regionOptions = [
   { label: '--select region--', value: '' },
+  { label: 'All regions', value: ALL_REGIONS_VALUE },
   ...[...new Set(datacenters.map((dc) => dc.region))].map((region) => ({ label: region, value: region }))
 ]
 
 const filteredDatacenterOptions = computed(() => {
+  const isAllRegions = selectedRegion.value === ALL_REGIONS_VALUE
   const datacenterItems = datacenters
-    .filter((dc) => dc.region === selectedRegion.value)
+    .filter((dc) => isAllRegions || dc.region === selectedRegion.value)
     .map((dc) => ({
-      label: dc.datacenter,
+      label: isAllRegions ? `${dc.datacenter} (${dc.region})` : dc.datacenter,
       value: dc.datacenter
     }))
 
-  return [{ label: '--select datacenter--', value: '' }, ...datacenterItems]
+  if (!selectedRegion.value) {
+    return [{ label: '--select datacenter--', value: '' }]
+  }
+
+  return [
+    { label: '--select datacenter--', value: '' },
+    {
+      label: isAllRegions ? 'All datacenters (all regions)' : 'All datacenters in region',
+      value: ALL_DATACENTERS_VALUE
+    },
+    ...datacenterItems
+  ]
+})
+
+const datacenterTargetsForCurrentRegion = computed(() => {
+  if (!selectedRegion.value) {
+    return []
+  }
+
+  if (selectedRegion.value === ALL_REGIONS_VALUE) {
+    return datacenters.map((dc) => dc.datacenter)
+  }
+
+  return datacenters
+    .filter((dc) => dc.region === selectedRegion.value)
+    .map((dc) => dc.datacenter)
 })
 
 function onRegionSelect(value) {
   selectedRegion.value = value || ''
   selectedDatacenter.value = ''
   store.selectedServer = ''
+  store.selectedMarketTargets = []
 }
 
 function processA() {
@@ -215,7 +245,22 @@ async function onPickB(file) {
 
 function onServerSelect(value) {
   selectedDatacenter.value = value || ''
-  store.selectedServer = value || ''
+
+  if (!value) {
+    store.selectedServer = ''
+    store.selectedMarketTargets = []
+    return
+  }
+
+  if (value === ALL_DATACENTERS_VALUE) {
+    const targets = Array.from(new Set(datacenterTargetsForCurrentRegion.value))
+    store.selectedMarketTargets = targets
+    store.selectedServer = targets.length === 1 ? targets[0] : `All Datacenters (${targets.length})`
+    return
+  }
+
+  store.selectedMarketTargets = [value]
+  store.selectedServer = value
 }
 
 function resetPage() {

@@ -63,9 +63,11 @@ export const useMainStore = defineStore('main', {
     compareResult: {
       added: [],
       removed: [],
-      quantityChanged: []
+      quantityChanged: [],
+      toAdd: []
     },
     selectedServer: '',
+    selectedMarketTargets: [],
     removeDyeForPricing: false,
     priceMarginInput: '5%',
     priceRows: [],
@@ -82,9 +84,11 @@ export const useMainStore = defineStore('main', {
       this.compareResult = {
         added: [],
         removed: [],
-        quantityChanged: []
+        quantityChanged: [],
+        toAdd: []
       }
       this.selectedServer = ''
+      this.selectedMarketTargets = []
       this.removeDyeForPricing = false
       this.priceMarginInput = '5%'
       this.priceRows = []
@@ -276,7 +280,7 @@ export const useMainStore = defineStore('main', {
           this.notice = `Getting prices... attempt ${attempt}/${maxAttempts}`
 
           try {
-            const marketRows = await fetchUniversalisPrices(this.selectedServer, marketRequirements)
+            const marketRows = await fetchUniversalisPrices(this.selectedMarketTargets, marketRequirements)
             this.priceRows = [...npcPriceRows, ...marketRows]
             this.notice = 'Prices loaded successfully.'
             return
@@ -302,7 +306,7 @@ export const useMainStore = defineStore('main', {
       return this.fetchPricesFromItems(this.normalizedA, 'No items in Processing list to price after applying filters.')
     },
     async fetchPricesAdvanced() {
-      return this.fetchPricesFromItems(this.compareResult.added, 'No added items in Compare Result to price after applying filters.')
+      return this.fetchPricesFromItems(this.compareResult.toAdd, 'No items to add in Compare Result after applying filters.')
     },
     async fetchPrices() {
       return this.fetchPricesProcessing()

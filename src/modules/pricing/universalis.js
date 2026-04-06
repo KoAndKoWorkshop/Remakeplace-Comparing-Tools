@@ -80,10 +80,69 @@ function splitChunks(arr, size) {
   return chunks
 }
 
-export async function fetchUniversalisPrices(server, requiredItems) {
-  const cleanServer = String(server || '').trim()
-  if (!cleanServer) {
-    throw new Error('Server is required.')
+function normalizeTargets(targets) {
+  if (Array.isArray(targets)) {
+    return Array.from(
+      new Set(
+        targets
+          .map((target) => String(target || '').trim())
+          .filter(Boolean)
+      )
+    )
+  }
+
+  const cleanTarget = String(targets || '').trim()
+  return cleanTarget ? [cleanTarget] : []
+}
+
+function toMs(value) {
+  if (!value) {
+    return null
+  }
+
+  const date = new Date(value)
+  const ms = date.getTime()
+  return Number.isNaN(ms) ? null : ms
+}
+
+function mergePayloads(payloads) {
+  const safePayloads = Array.isArray(payloads) ? payloads : []
+  const listings = []
+  const minCandidates = []
+  let latestUploadRaw = null
+  let latestUploadMs = null
+
+  for (const payload of safePayloads) {
+    const payloadListings = Array.isArray(payload?.listings) ? payload.listings : []
+    listings.push(...payloadListings)
+
+    const minPriceNQ = toNumberOrNull(payload?.minPriceNQ)
+    const minPriceHQ = toNumberOrNull(payload?.minPriceHQ)
+    const minPrice = toNumberOrNull(payload?.minPrice)
+    if (Number.isFinite(minPriceNQ)) minCandidates.push(minPriceNQ)
+    if (Number.isFinite(minPriceHQ)) minCandidates.push(minPriceHQ)
+    if (Number.isFinite(minPrice)) minCandidates.push(minPrice)
+
+    const uploadRaw = payload?.lastUploadTime ?? payload?.lastUpload
+    const uploadMs = toMs(uploadRaw)
+    if (uploadMs !== null && (latestUploadMs === null || uploadMs > latestUploadMs)) {
+      latestUploadMs = uploadMs
+      latestUploadRaw = uploadRaw
+    }
+  }
+
+  return {
+    listings,
+    minPrice: minCandidates.length ? Math.min(...minCandidates) : null,
+    lastUploadTime: latestUploadRaw,
+    lastUpload: latestUploadRaw
+  }
+}
+
+export async function fetchUniversalisPrices(targets, requiredItems) {
+  const cleanTargets = normalizeTargets(targets)
+  if (!cleanTargets.length) {
+    throw new Error('At least one datacenter is required.')
   }
 
   const requirements = Array.isArray(requiredItems)
@@ -106,19 +165,30 @@ export async function fetchUniversalisPrices(server, requiredItems) {
   const rows = []
 
   for (const chunk of chunks) {
-    const url = `https://universalis.app/api/v2/${encodeURIComponent(cleanServer)}/${chunk.join(',')}`
-    const response = await fetch(url)
+    const itemsById = new Map()
 
-    if (!response.ok) {
-      throw new Error(`Universalis request failed: ${response.status}`)
+    for (const target of cleanTargets) {
+      const url = `https://universalis.app/api/v2/${encodeURIComponent(target)}/${chunk.join(',')}`
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        throw new Error(`Universalis request failed (${target}): ${response.status}`)
+      }
+
+      const json = await response.json()
+      const items = json?.items && typeof json.items === 'object' ? json.items : {}
+
+      for (const id of chunk) {
+        const payloadList = itemsById.get(id) || []
+        payloadList.push(items[id] || {})
+        itemsById.set(id, payloadList)
+      }
     }
 
-    const json = await response.json()
-    const items = json?.items && typeof json.items === 'object' ? json.items : {}
-
     for (const id of chunk) {
+      const mergedPayload = mergePayloads(itemsById.get(id) || [])
       for (const requirement of requirements.filter((item) => item.itemId === id)) {
-        rows.push(mapItemPrice(requirement, items[id] || {}))
+        rows.push(mapItemPrice(requirement, mergedPayload))
       }
     }
   }

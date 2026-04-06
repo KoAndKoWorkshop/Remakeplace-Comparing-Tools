@@ -15,20 +15,36 @@ export function compareLists(left, right) {
   const added = []
   const removed = []
   const quantityChanged = []
+  const toAdd = []
 
   for (const [key, rightItem] of rightMap.entries()) {
     const leftItem = leftMap.get(key)
     if (!leftItem) {
       added.push(rightItem)
+      toAdd.push({
+        ...rightItem,
+        quantity: Number(rightItem?.quantity || 0)
+      })
       continue
     }
 
-    if (leftItem.quantity !== rightItem.quantity) {
+    const leftQty = Number(leftItem?.quantity || 0)
+    const rightQty = Number(rightItem?.quantity || 0)
+
+    // Only keep increases where list B requires more than list A.
+    if (rightQty > leftQty) {
+      const deltaQty = rightQty - leftQty
       quantityChanged.push({
         key,
-        leftQty: leftItem.quantity,
-        rightQty: rightItem.quantity,
+        leftQty,
+        rightQty,
+        deltaQty,
         item: rightItem
+      })
+
+      toAdd.push({
+        ...rightItem,
+        quantity: deltaQty
       })
     }
   }
@@ -39,5 +55,5 @@ export function compareLists(left, right) {
     }
   }
 
-  return { added, removed, quantityChanged }
+  return { added, removed, quantityChanged, toAdd }
 }
