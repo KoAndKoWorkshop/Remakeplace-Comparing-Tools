@@ -9,29 +9,29 @@
 
             <FileUploadCard :key="`file-a-${fileInputResetKey}`" title="Import JSON (A)" :file-name="fileAName" @selected="onPickA" />
 
-            <v-select
-              v-model="selectedRegion"
-              :items="regionOptions"
-              label="Region"
-              item-title="label"
-              item-value="value"
-              variant="outlined"
-              density="comfortable"
-              class="mb-2"
-              @update:model-value="onRegionSelect"
-            />
-
-            <v-select
-              v-model="selectedDatacenter"
-              :items="filteredDatacenterOptions"
-              label="Datacenter"
-              item-title="label"
-              item-value="value"
-              variant="outlined"
-              density="comfortable"
-              :disabled="!selectedRegion"
-              @update:model-value="onServerSelect"
-            />
+            <div class="datacenter-filter-wrap mb-2">
+              <div class="datacenter-filter-title">Datacenters by region</div>
+              <div class="datacenter-region-list">
+                <div v-for="group in datacenterGroups" :key="group.region" class="datacenter-region-group">
+                  <div class="datacenter-region-title">{{ group.region }}</div>
+                  <div class="datacenter-grid">
+                    <label
+                      v-for="datacenter in group.datacenters"
+                      :key="`${group.region}-${datacenter}`"
+                      class="datacenter-checkbox"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="datacenter"
+                        v-model="selectedDatacenters"
+                        @change="onDatacenterSelectionChange"
+                      />
+                      <span>{{ datacenter }}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <v-btn v-if="hasFileA" block color="error" variant="outlined" class="mt-2" @click="resetPage">
               Reset All
@@ -201,11 +201,8 @@ const store = useMainStore()
 const fileAName = ref('')
 const fileBName = ref('')
 const activeTab = ref('processing')
-const selectedRegion = ref('')
-const selectedDatacenter = ref('')
+const selectedDatacenters = ref([])
 const fileInputResetKey = ref(0)
-const ALL_REGIONS_VALUE = '__ALL_REGIONS__'
-const ALL_DATACENTERS_VALUE = '__ALL_DATACENTERS__'
 const hasFileA = computed(() => !!store.rawA)
 const hasFileB = computed(() => !!store.rawB)
 const canGetPricesA = computed(() => store.normalizedA.length > 0)
@@ -221,59 +218,44 @@ const processingCategoryOptions = [
 const allProcessingCategoryValues = processingCategoryOptions.map((option) => option.value)
 const selectedProcessingCategories = ref([...allProcessingCategoryValues])
 const selectedAdvancedCategories = ref([...allProcessingCategoryValues])
-const regionOptions = [
-  { label: '--select region--', value: '' },
-  { label: 'All regions', value: ALL_REGIONS_VALUE },
-  ...[...new Set(datacenters.map((dc) => dc.region))].map((region) => ({ label: region, value: region }))
-]
+const datacenterGroups = computed(() => {
+  const groupedMap = new Map()
 
-const filteredDatacenterOptions = computed(() => {
-  const isAllRegions = selectedRegion.value === ALL_REGIONS_VALUE
-  const datacenterItems = datacenters
-    .filter((dc) => isAllRegions || dc.region === selectedRegion.value)
-    .map((dc) => ({
-      label: isAllRegions ? `${dc.datacenter} (${dc.region})` : dc.datacenter,
-      value: dc.datacenter
-    }))
+  for (const entry of datacenters) {
+    if (!groupedMap.has(entry.region)) {
+      groupedMap.set(entry.region, [])
+    }
 
-  if (!selectedRegion.value) {
-    return [{ label: '--select datacenter--', value: '' }]
+    groupedMap.get(entry.region).push(entry.datacenter)
   }
 
-  return [
-    { label: '--select datacenter--', value: '' },
-    {
-      label: isAllRegions ? 'All datacenters (all regions)' : 'All datacenters in region',
-      value: ALL_DATACENTERS_VALUE
-    },
-    ...datacenterItems
-  ]
+  return Array.from(groupedMap.entries()).map(([region, groupedDatacenters]) => ({
+    region,
+    datacenters: groupedDatacenters
+  }))
 })
 
-const datacenterTargetsForCurrentRegion = computed(() => {
-  if (!selectedRegion.value) {
-    return []
+function onDatacenterSelectionChange() {
+  const targets = Array.from(new Set(selectedDatacenters.value))
+
+  store.selectedMarketTargets = targets
+
+  if (targets.length === 0) {
+    store.selectedServer = ''
+    return
   }
 
-  if (selectedRegion.value === ALL_REGIONS_VALUE) {
-    return datacenters.map((dc) => dc.datacenter)
+  if (targets.length === 1) {
+    store.selectedServer = targets[0]
+    return
   }
 
-  return datacenters
-    .filter((dc) => dc.region === selectedRegion.value)
-    .map((dc) => dc.datacenter)
-})
-
-function onRegionSelect(value) {
-  selectedRegion.value = value || ''
-  selectedDatacenter.value = ''
-  store.selectedServer = ''
-  store.selectedMarketTargets = []
+  store.selectedServer = `Selected Datacenters (${targets.length})`
 }
 
 function processA() {
-  if (!selectedRegion.value || !selectedDatacenter.value) {
-    store.error = 'Please select both region and datacenter before processing.'
+  if (selectedDatacenters.value.length === 0) {
+    store.error = 'Please select at least one datacenter before processing.'
     return
   }
 
@@ -287,8 +269,8 @@ function processA() {
 }
 
 function processCompare() {
-  if (!selectedRegion.value || !selectedDatacenter.value) {
-    store.error = 'Please select both region and datacenter before processing.'
+  if (selectedDatacenters.value.length === 0) {
+    store.error = 'Please select at least one datacenter before processing.'
     return
   }
 
@@ -313,32 +295,11 @@ async function onPickB(file) {
   await store.loadFile('B', file)
 }
 
-function onServerSelect(value) {
-  selectedDatacenter.value = value || ''
-
-  if (!value) {
-    store.selectedServer = ''
-    store.selectedMarketTargets = []
-    return
-  }
-
-  if (value === ALL_DATACENTERS_VALUE) {
-    const targets = Array.from(new Set(datacenterTargetsForCurrentRegion.value))
-    store.selectedMarketTargets = targets
-    store.selectedServer = targets.length === 1 ? targets[0] : `All Datacenters (${targets.length})`
-    return
-  }
-
-  store.selectedMarketTargets = [value]
-  store.selectedServer = value
-}
-
 function resetPage() {
   fileAName.value = ''
   fileBName.value = ''
   activeTab.value = 'processing'
-  selectedRegion.value = ''
-  selectedDatacenter.value = ''
+  selectedDatacenters.value = []
   selectedProcessingCategories.value = [...allProcessingCategoryValues]
   selectedAdvancedCategories.value = [...allProcessingCategoryValues]
   fileInputResetKey.value += 1
@@ -382,6 +343,57 @@ function onNoticeToggle(open) {
 }
 
 .category-checkbox input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.datacenter-filter-wrap {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.datacenter-filter-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.datacenter-region-list {
+  display: grid;
+  gap: 8px;
+}
+
+.datacenter-region-group {
+  padding-top: 2px;
+}
+
+.datacenter-region-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.datacenter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 4px 10px;
+}
+
+.datacenter-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.datacenter-checkbox input[type='checkbox'] {
   width: 16px;
   height: 16px;
   margin: 0;

@@ -1,0 +1,47 @@
+﻿[
+    {
+        "color":  "E40011FF",
+        "name":  "Ruby Red Dye",
+        "id":  "30116"
+    },
+    {
+        "color":  "F5379BFF",
+        "name":  "Cherry Pink Dye",
+        "id":  "30117"
+    },
+    {
+        "color":  "FEF864FF",
+        "name":  "Canary Yellow Dye",
+        "id":  "30118"
+    },
+    {
+        "color":  "FBF1B4FF",
+        "name":  "Vanilla Yellow Dye",
+        "id":  "30119"
+    },
+    {
+        "color":  "000EA2FF",
+        "name":  "Dragoon Blue Dye",
+        "id":  "30120"
+    },
+    {
+        "color":  "04AFCDFF",
+        "name":  "Turquoise Blue Dye",
+        "id":  "30121"
+    },
+    {
+        "color":  null,
+        "name":  "Gunmetal Black Dye",
+        "id":  "30122"
+    },
+    {
+        "color":  null,
+        "name":  "Pearl White Dye",
+        "id":  "30123"
+    },
+    {
+        "color":  null,
+        "name":  "Metallic Brass Dye",
+        "id":  "30124"
+    }
+]
