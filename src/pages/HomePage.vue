@@ -7,7 +7,12 @@
             <img class="brand-logo" :src="kokoLogo" alt="Ko&Ko Workshop logo" />
             <h1 class="left-title">Ko&Ko Workshop Tools</h1>
 
-            <FileUploadCard :key="`file-a-${fileInputResetKey}`" title="Import JSON (A)" :file-name="fileAName" @selected="onPickA" />
+            <FileUploadCard
+              :key="`file-a-${fileInputResetKey}`"
+              title="Import New Design JSON (A)"
+              :file-name="fileAName"
+              @selected="onPickA"
+            />
 
             <div class="datacenter-filter-wrap mb-2">
               <div class="datacenter-filter-title">Datacenters by region</div>
@@ -38,7 +43,7 @@
             </v-btn>
 
             <v-alert v-if="hasFileA" type="success" variant="tonal" density="comfortable" class="mt-2">
-              File A loaded: {{ fileAName }}
+              New design file (A) loaded: {{ fileAName }}
             </v-alert>
             <v-alert v-if="store.error" type="error" variant="tonal" density="comfortable" class="mt-2">
               {{ store.error }}
@@ -56,65 +61,48 @@
               <v-tab value="advanced">Advanced</v-tab>
             </v-tabs>
 
-            <v-row v-if="activeTab === 'processing'">
-              <v-col cols="12">
-                <div class="category-filter-wrap mb-2">
-                  <div class="category-filter-title">Categories to include</div>
-                  <div class="category-filter-grid">
-                    <label
-                      v-for="option in processingCategoryOptions"
-                      :key="option.value"
-                      class="category-checkbox"
-                    >
-                      <input
-                        type="checkbox"
-                        :value="option.value"
-                        v-model="selectedProcessingCategories"
-                      />
-                      <span>{{ option.label }}</span>
-                    </label>
-                  </div>
-                </div>
-              </v-col>
-              <v-col cols="12" class="d-flex flex-wrap ga-2">
-                <v-btn color="primary" @click="processA">Process</v-btn>
-              </v-col>
-            </v-row>
+            <ProcessingTab
+              v-if="activeTab === 'processing'"
+              :category-options="processingCategoryOptions"
+              v-model:selected-categories="selectedProcessingCategories"
+              :normalized-rows="store.normalizedA"
+              :price-rows="store.priceRows"
+              :loading="store.loading"
+              :can-get-prices="canGetPricesA"
+              v-model:remove-dye-for-pricing="store.removeDyeForPricing"
+              v-model:margin-input="store.priceMarginInput"
+              @process="processA"
+              @export-teamcraft="store.exportTeamcraft(store.normalizedA)"
+              @get-prices="store.fetchPricesProcessing()"
+              @export-price-csv="store.exportPricePlanCsv()"
+            />
 
-            <v-row v-if="activeTab === 'advanced'">
-              <v-col cols="12">
-                <FileUploadCard
-                  :key="`file-b-${fileInputResetKey}`"
-                  title="Import Second JSON (B)"
-                  :file-name="fileBName"
-                  helper-text="*Import old JSON in A, and new JSON in B to compare the furniture and generate the list of new items you need to obtain."
-                  @selected="onPickB"
-                />
-              </v-col>
-              <v-col cols="12">
-                <div class="category-filter-wrap mb-2">
-                  <div class="category-filter-title">Categories to include</div>
-                  <div class="category-filter-grid">
-                    <label
-                      v-for="option in processingCategoryOptions"
-                      :key="`advanced-${option.value}`"
-                      class="category-checkbox"
-                    >
-                      <input
-                        type="checkbox"
-                        :value="option.value"
-                        v-model="selectedAdvancedCategories"
-                      />
-                      <span>{{ option.label }}</span>
-                    </label>
-                  </div>
-                </div>
-              </v-col>
-              <v-col cols="12" class="d-flex flex-wrap ga-2">
-                <v-btn color="primary" :disabled="!hasFileB" @click="processCompare">Process</v-btn>
-                <v-btn color="warning" :disabled="!canCompare" @click="store.compareAB()">Compare A vs B</v-btn>
-              </v-col>
-            </v-row>
+            <AdvancedTab
+              v-if="activeTab === 'advanced'"
+              :file-input-reset-key="fileInputResetKey"
+              :file-b-name="fileBName"
+              :has-file-b="hasFileB"
+              :category-options="processingCategoryOptions"
+              v-model:selected-categories="selectedAdvancedCategories"
+              :can-compare="canCompare"
+              :normalized-b="store.normalizedB"
+              :compare-result="store.compareResult"
+              :price-rows="store.priceRows"
+              :loading="store.loading"
+              :can-get-prices-b="canGetPricesB"
+              :can-get-prices-compare="canGetPricesCompare"
+              v-model:price-mode="advancedPriceMode"
+              v-model:remove-dye-for-pricing="store.removeDyeForPricing"
+              v-model:margin-input="store.priceMarginInput"
+              @pick-b="onPickB"
+              @process="processCompare"
+              @compare="store.compareAB()"
+              @export-teamcraft-b="store.exportTeamcraft(store.normalizedB)"
+              @export-teamcraft-added="store.exportTeamcraft(store.compareResult.toAdd)"
+              @get-prices-b="store.fetchPricesAdvancedB()"
+              @get-prices-compare="store.fetchPricesAdvancedCompare()"
+              @export-price-csv="store.exportPricePlanCsv()"
+            />
 
             <v-progress-linear v-if="store.loading" indeterminate color="info" class="mt-2" />
             <v-alert v-if="store.loading" type="info" variant="tonal" density="comfortable" class="mt-2">
@@ -123,50 +111,6 @@
           </v-card-text>
         </v-card>
 
-        <v-window v-model="activeTab">
-          <v-window-item value="processing">
-            <NormalizedTable
-              title="Item List (A)"
-              :rows="store.normalizedA"
-              :disable-teamcraft-button="store.loading"
-              @export-teamcraft="store.exportTeamcraft(store.normalizedA)"
-            />
-            <PriceTable
-              :rows="store.priceRows"
-              :loading="store.loading"
-              :can-get-prices="canGetPricesA"
-              v-model:remove-dye-for-pricing="store.removeDyeForPricing"
-              v-model:margin-input="store.priceMarginInput"
-              @get-prices="store.fetchPricesProcessing()"
-              @export-price-csv="store.exportPricePlanCsv()"
-            />
-          </v-window-item>
-
-          <v-window-item value="advanced">
-            <NormalizedTable
-              v-if="hasFileB"
-              title="Item List (B)"
-              :rows="store.normalizedB"
-              :disable-teamcraft-button="store.loading"
-              @export-teamcraft="store.exportTeamcraft(store.normalizedB)"
-            />
-            <DiffTable
-              v-if="hasFileB"
-              :result="store.compareResult"
-              :disable-teamcraft-button="store.loading"
-              @export-teamcraft-added="store.exportTeamcraft(store.compareResult.toAdd)"
-            />
-            <PriceTable
-              :rows="store.priceRows"
-              :loading="store.loading"
-              :can-get-prices="canGetPricesCompare"
-              v-model:remove-dye-for-pricing="store.removeDyeForPricing"
-              v-model:margin-input="store.priceMarginInput"
-              @get-prices="store.fetchPricesAdvanced()"
-              @export-price-csv="store.exportPricePlanCsv()"
-            />
-          </v-window-item>
-        </v-window>
       </section>
     </div>
 
@@ -190,9 +134,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import FileUploadCard from '@/components/FileUploadCard.vue'
-import NormalizedTable from '@/components/NormalizedTable.vue'
-import DiffTable from '@/components/DiffTable.vue'
-import PriceTable from '@/components/PriceTable.vue'
+import ProcessingTab from '@/components/ProcessingTab.vue'
+import AdvancedTab from '@/components/AdvancedTab.vue'
 import { useMainStore } from '@/stores/useMainStore'
 import kokoLogo from '@/assets/koko-bw-logo-v2.png'
 import datacenters from '@/data/datacenter.json'
@@ -203,10 +146,13 @@ const fileBName = ref('')
 const activeTab = ref('processing')
 const selectedDatacenters = ref([])
 const fileInputResetKey = ref(0)
+const advancedPriceMode = ref('compare')
 const hasFileA = computed(() => !!store.rawA)
 const hasFileB = computed(() => !!store.rawB)
-const canGetPricesA = computed(() => store.normalizedA.length > 0)
-const canGetPricesCompare = computed(() => store.compareResult.toAdd.length > 0)
+const hasSelectedDatacenter = computed(() => selectedDatacenters.value.length > 0)
+const canGetPricesA = computed(() => store.normalizedA.length > 0 && hasSelectedDatacenter.value)
+const canGetPricesB = computed(() => store.normalizedB.length > 0 && hasSelectedDatacenter.value)
+const canGetPricesCompare = computed(() => store.compareResult.toAdd.length > 0 && hasSelectedDatacenter.value)
 const canCompare = computed(() => store.normalizedA.length > 0 && store.normalizedB.length > 0)
 const processingCategoryOptions = [
   { label: 'Interior Furniture', value: 'interiorFurniture' },
@@ -254,11 +200,6 @@ function onDatacenterSelectionChange() {
 }
 
 function processA() {
-  if (selectedDatacenters.value.length === 0) {
-    store.error = 'Please select at least one datacenter before processing.'
-    return
-  }
-
   if (selectedProcessingCategories.value.length === 0) {
     store.error = 'Please select at least one category before processing.'
     return
@@ -269,11 +210,6 @@ function processA() {
 }
 
 function processCompare() {
-  if (selectedDatacenters.value.length === 0) {
-    store.error = 'Please select at least one datacenter before processing.'
-    return
-  }
-
   if (selectedAdvancedCategories.value.length === 0) {
     store.error = 'Please select at least one category before processing.'
     return
@@ -300,6 +236,7 @@ function resetPage() {
   fileBName.value = ''
   activeTab.value = 'processing'
   selectedDatacenters.value = []
+  advancedPriceMode.value = 'compare'
   selectedProcessingCategories.value = [...allProcessingCategoryValues]
   selectedAdvancedCategories.value = [...allProcessingCategoryValues]
   fileInputResetKey.value += 1
@@ -314,41 +251,6 @@ function onNoticeToggle(open) {
 </script>
 
 <style scoped>
-.category-filter-wrap {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.category-filter-title {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.category-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 4px 12px;
-}
-
-.category-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.2;
-  cursor: pointer;
-}
-
-.category-checkbox input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  cursor: pointer;
-}
-
 .datacenter-filter-wrap {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;

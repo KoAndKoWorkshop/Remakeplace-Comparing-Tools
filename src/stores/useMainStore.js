@@ -133,7 +133,10 @@ export const useMainStore = defineStore('main', {
     compareAB() {
       try {
         this.clearError()
-        this.compareResult = compareLists(this.normalizedA, this.normalizedB)
+        // A is the new design and B is the old design.
+        // compareLists(left, right) treats right-side additions/increases as `toAdd`,
+        // so pass B as left and A as right.
+        this.compareResult = compareLists(this.normalizedB, this.normalizedA)
       } catch (error) {
         this.error = error.message || 'Failed to compare normalized lists.'
       }
@@ -305,8 +308,14 @@ export const useMainStore = defineStore('main', {
     async fetchPricesProcessing() {
       return this.fetchPricesFromItems(this.normalizedA, 'No items in Processing list to price after applying filters.')
     },
-    async fetchPricesAdvanced() {
+    async fetchPricesAdvancedB() {
+      return this.fetchPricesFromItems(this.normalizedB, 'No items in Item List (B) to price after applying filters.')
+    },
+    async fetchPricesAdvancedCompare() {
       return this.fetchPricesFromItems(this.compareResult.toAdd, 'No items to add in Compare Result after applying filters.')
+    },
+    async fetchPricesAdvanced() {
+      return this.fetchPricesAdvancedCompare()
     },
     async fetchPrices() {
       return this.fetchPricesProcessing()

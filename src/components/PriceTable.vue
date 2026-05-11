@@ -40,49 +40,51 @@
 
       <div class="total-price-summary mb-3">Total Price: {{ formatPrice(totalAdjustedPrice) }}</div>
 
-      <v-table density="compact" class="table-wrap">
-        <thead>
-          <tr>
-            <th>Id</th>
-            <th>Name</th>
-            <th>Qty</th>
-            <th>Lowest Price</th>
-            <th>Total Cost</th>
-            <th>Plan (Low to High)</th>
-            <th>Last Upload Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, index) in rows" :key="`${row.itemId}-${index}`">
-            <td>{{ row.itemId }}</td>
-            <td>{{ row.itemName }}</td>
-            <td>{{ row.requiredQuantity }}</td>
-            <td>{{ formatPrice(getAdjustedAveragePrice(row)) }}</td>
-            <td>{{ formatPrice(getAdjustedTotalCost(row)) }}</td>
-            <td>
-              <div v-if="row.purchasePlanRows?.length" class="plan-rows">
-                <div v-for="(pick, pickIndex) in row.purchasePlanRows" :key="`${row.itemId}-${index}-${pickIndex}`">
-                  {{ pick.quantity }} x {{ formatPrice(getAdjustedPlanUnitPrice(pick)) }}
-                  <span v-if="pick.worldName">@{{ pick.worldName }}</span>
-                  = {{ formatPrice(getAdjustedPlanSubtotal(pick)) }}
-                </div>
-              </div>
-              <span v-else>-</span>
-            </td>
-            <td>{{ row.lastUploadTime }}</td>
-          </tr>
-          <tr v-if="rows.length === 0">
-            <td colspan="7">No prices loaded.</td>
-          </tr>
-        </tbody>
-      </v-table>
+      <div v-if="groupedDcData.length" class="dc-groups">
+        <section v-for="dc in groupedDcData" :key="dc.dcName" class="dc-group">
+          <div class="dc-header">
+            <strong>{{ dc.dcName }}</strong>
+            <div class="dc-header-right">
+              <span>{{ formatPrice(dc.grandTotal) }} gil</span>
+              <v-btn
+                size="small"
+                variant="outlined"
+                color="success"
+                @click="toggleDc(dc.dcName)"
+              >
+                {{ isDcExpanded(dc.dcName) ? 'Collapse' : 'Expand' }}
+              </v-btn>
+            </div>
+          </div>
+
+          <div v-if="isDcExpanded(dc.dcName)" class="server-grid">
+            <article v-for="server in dc.servers" :key="`${dc.dcName}-${server.serverName}`" class="server-card">
+              <header class="server-card-header">
+                <h3>{{ server.serverName }}</h3>
+                <p>Total Cost: {{ formatPrice(server.totalCost) }} gil</p>
+              </header>
+
+              <ul class="item-list">
+                <li v-for="item in server.items" :key="`${server.serverName}-${item.itemId || item.itemName}`" class="item-row">
+                  <span>{{ item.quantity }}x {{ item.itemName }} ({{ formatPrice(item.unitPrice) }} gil each)</span>
+                </li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <v-alert v-else type="info" variant="tonal" density="comfortable">
+        No prices loaded.
+      </v-alert>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { adjustTotalCost, adjustUnitPrice, parsePriceMarginInput, roundUp } from '@/utils/pricingMargin'
+import { transformPriceRowsToDcCards } from '@/modules/pricing/marketGrouping'
 
 const emit = defineEmits(['get-prices', 'export-price-csv', 'update:removeDyeForPricing', 'update:marginInput'])
 
@@ -110,8 +112,15 @@ const props = defineProps({
 })
 
 const marginRule = computed(() => parsePriceMarginInput(props.marginInput))
+const collapsedDatacenters = ref({})
+const groupedDcData = computed(() => {
+  return transformPriceRowsToDcCards(props.rows, {
+    adjustUnitPrice: (pricePerUnit) => adjustUnitPrice(pricePerUnit, marginRule.value),
+    adjustSubtotal: (subtotal, quantity) => adjustTotalCost(subtotal, quantity, marginRule.value)
+  })
+})
 const totalAdjustedPrice = computed(() => {
-  return props.rows.reduce((sum, row) => sum + Number(getAdjustedTotalCost(row) || 0), 0)
+  return groupedDcData.value.reduce((sum, dc) => sum + Number(dc?.grandTotal || 0), 0)
 })
 
 function onToggleRemoveDye(value) {
@@ -122,33 +131,14 @@ function onUpdateMarginInput(value) {
   emit('update:marginInput', String(value ?? ''))
 }
 
-function getAdjustedAveragePrice(row) {
-  const lowestPlanUnitPrice = Array.isArray(row?.purchasePlanRows) && row.purchasePlanRows.length
-    ? row.purchasePlanRows[0]?.pricePerUnit
-    : null
-  const basePrice = lowestPlanUnitPrice ?? row?.minPrice ?? row?.averageUnitPrice
-  return adjustUnitPrice(basePrice, marginRule.value)
+function isDcExpanded(dcName) {
+  const key = String(dcName || '')
+  return collapsedDatacenters.value[key] !== true
 }
 
-function getAdjustedTotalCost(row) {
-  const quantity = Number(row?.fulfilledQuantity || row?.requiredQuantity || 0)
-  const lowestPlanUnitPrice = Array.isArray(row?.purchasePlanRows) && row.purchasePlanRows.length
-    ? row.purchasePlanRows[0]?.pricePerUnit
-    : null
-
-  if (Number.isFinite(Number(lowestPlanUnitPrice)) && quantity > 0) {
-    return adjustTotalCost(Number(lowestPlanUnitPrice) * quantity, quantity, marginRule.value)
-  }
-
-  return adjustTotalCost(row?.totalCost, quantity, marginRule.value)
-}
-
-function getAdjustedPlanUnitPrice(planRow) {
-  return adjustUnitPrice(planRow?.pricePerUnit, marginRule.value)
-}
-
-function getAdjustedPlanSubtotal(planRow) {
-  return adjustTotalCost(planRow?.subtotal, planRow?.quantity, marginRule.value)
+function toggleDc(dcName) {
+  const key = String(dcName || '')
+  collapsedDatacenters.value[key] = isDcExpanded(key)
 }
 
 function formatPrice(value) {
@@ -157,7 +147,9 @@ function formatPrice(value) {
     return '-'
   }
 
-  return String(amount)
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0
+  }).format(amount)
 }
 </script>
 
@@ -210,9 +202,77 @@ function formatPrice(value) {
   font-weight: 600;
 }
 
-.plan-rows {
+.dc-groups {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 12px;
+}
+
+.dc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dc-header {
+  width: 100%;
+  background: #1f4b38;
+  color: #f4fff8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.dc-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.server-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.server-card-header {
+  margin-bottom: 8px;
+}
+
+.server-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.server-card-header p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #b8c0cf;
+}
+
+.item-list {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 </style>

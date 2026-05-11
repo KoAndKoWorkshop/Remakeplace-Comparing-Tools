@@ -1,6 +1,6 @@
 <template>
   <v-card class="mb-4" variant="tonal">
-    <v-card-title>Compare Result (A vs B)</v-card-title>
+    <v-card-title>Compare Result (New A vs Old B)</v-card-title>
     <v-card-text>
 
     <div class="section-header">

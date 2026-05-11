@@ -1319,6 +1319,26 @@
         {
             "name": "Grape Purple Dye",
             "price": 216
+        },
+        {
+            "name": "Charcoal Interior Wall",
+            "price": 5000
+        },
+        {
+            "name": "Dark Wood Flooring",
+            "price": 5000
+        },
+        {
+            "name": "Square Ceiling Lamp",
+            "price": 5000
+        },
+        {
+            "name": "Minimalist Poplar Partition",
+            "price": 9000
+        },
+        {
+            "name": "Minimalist Poplar Partition Door",
+            "price": 9000
         }
     ]
 }
