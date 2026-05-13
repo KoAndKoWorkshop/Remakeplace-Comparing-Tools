@@ -42,14 +42,16 @@
       title="Item List (B)"
       :rows="normalizedB"
       :disable-teamcraft-button="loading"
-      @export-teamcraft="$emit('export-teamcraft-b')"
+      @update:selected-rows="onUpdateSelectedRowsB"
+      @export-teamcraft="onExportTeamcraftB"
     />
 
     <DiffTable
       v-if="hasFileB"
       :result="compareResult"
       :disable-teamcraft-button="loading"
-      @export-teamcraft-added="$emit('export-teamcraft-added')"
+      @update:selected-to-add-rows="onUpdateSelectedToAddRows"
+      @export-teamcraft-added="onExportTeamcraftAdded"
     />
 
     <div class="price-mode-wrap mb-2">
@@ -69,7 +71,7 @@
     <PriceTable
       :rows="priceRows"
       :loading="loading"
-      :can-get-prices="canGetPricesByMode"
+      :can-get-prices="canGetPricesBySelection"
       :remove-dye-for-pricing="removeDyeForPricing"
       :margin-input="marginInput"
       @update:remove-dye-for-pricing="$emit('update:removeDyeForPricing', $event)"
@@ -81,7 +83,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import FileUploadCard from '@/components/FileUploadCard.vue'
 import NormalizedTable from '@/components/NormalizedTable.vue'
 import DiffTable from '@/components/DiffTable.vue'
@@ -175,9 +177,36 @@ const selectedCategoriesModel = computed({
   set: (value) => emit('update:selectedCategories', value)
 })
 
+const selectedRowsB = ref([])
+const selectedToAddRows = ref([])
+
 const canGetPricesByMode = computed(() => {
   return props.priceMode === 'b-only' ? props.canGetPricesB : props.canGetPricesCompare
 })
+
+const canGetPricesBySelection = computed(() => {
+  const hasSelection = props.priceMode === 'b-only'
+    ? selectedRowsB.value.length > 0
+    : selectedToAddRows.value.length > 0
+
+  return canGetPricesByMode.value && hasSelection
+})
+
+function onUpdateSelectedRowsB(rows) {
+  selectedRowsB.value = Array.isArray(rows) ? rows : []
+}
+
+function onUpdateSelectedToAddRows(rows) {
+  selectedToAddRows.value = Array.isArray(rows) ? rows : []
+}
+
+function onExportTeamcraftB() {
+  emit('export-teamcraft-b', selectedRowsB.value)
+}
+
+function onExportTeamcraftAdded() {
+  emit('export-teamcraft-added', selectedToAddRows.value)
+}
 
 function onUpdatePriceMode(value) {
   if (value) {
@@ -187,11 +216,11 @@ function onUpdatePriceMode(value) {
 
 function onGetPrices() {
   if (props.priceMode === 'b-only') {
-    emit('get-prices-b')
+    emit('get-prices-b', selectedRowsB.value)
     return
   }
 
-  emit('get-prices-compare')
+  emit('get-prices-compare', selectedToAddRows.value)
 }
 </script>
 

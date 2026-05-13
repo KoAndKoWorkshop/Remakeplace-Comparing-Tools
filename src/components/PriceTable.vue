@@ -1,7 +1,22 @@
 <template>
   <v-card class="mb-4" variant="tonal">
-    <v-card-title>Price</v-card-title>
-    <v-card-text>
+    <v-card-title class="card-title-row">
+      <span>Price</span>
+      <v-btn
+        icon
+        size="small"
+        variant="text"
+        :aria-label="isExpanded ? 'Collapse section' : 'Expand section'"
+        @click="toggleExpanded"
+      >
+        <svg :class="['chevron-icon', { 'is-up': isExpanded }]" viewBox="0 0 24 24" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </v-btn>
+    </v-card-title>
+    <v-expand-transition>
+      <div v-show="isExpanded" class="expand-body-wrap">
+        <v-card-text>
       <div class="controls-row mb-2">
         <label class="remove-dye-option" for="remove-dye-checkbox">
           <input
@@ -47,37 +62,44 @@
             <div class="dc-header-right">
               <span>{{ formatPrice(dc.grandTotal) }} gil</span>
               <v-btn
+                icon
                 size="small"
-                variant="outlined"
-                color="success"
+                variant="text"
+                :aria-label="isDcExpanded(dc.dcName) ? `Collapse ${dc.dcName}` : `Expand ${dc.dcName}`"
                 @click="toggleDc(dc.dcName)"
               >
-                {{ isDcExpanded(dc.dcName) ? 'Collapse' : 'Expand' }}
+                <svg :class="['chevron-icon', { 'is-up': isDcExpanded(dc.dcName) }]" viewBox="0 0 24 24" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </v-btn>
             </div>
           </div>
 
-          <div v-if="isDcExpanded(dc.dcName)" class="server-grid">
-            <article v-for="server in dc.servers" :key="`${dc.dcName}-${server.serverName}`" class="server-card">
-              <header class="server-card-header">
-                <h3>{{ server.serverName }}</h3>
-                <p>Total Cost: {{ formatPrice(server.totalCost) }} gil</p>
-              </header>
+          <v-expand-transition>
+            <div v-show="isDcExpanded(dc.dcName)" class="server-grid">
+              <article v-for="server in dc.servers" :key="`${dc.dcName}-${server.serverName}`" class="server-card">
+                <header class="server-card-header">
+                  <h3>{{ server.serverName }}</h3>
+                  <p>Total Cost: {{ formatPrice(server.totalCost) }} gil</p>
+                </header>
 
-              <ul class="item-list">
-                <li v-for="item in server.items" :key="`${server.serverName}-${item.itemId || item.itemName}`" class="item-row">
-                  <span>{{ item.quantity }}x {{ item.itemName }} ({{ formatPrice(item.unitPrice) }} gil each)</span>
-                </li>
-              </ul>
-            </article>
-          </div>
+                <ul class="item-list">
+                  <li v-for="item in server.items" :key="`${server.serverName}-${item.itemId || item.itemName}`" class="item-row">
+                    <span>{{ item.quantity }}x {{ item.itemName }} ({{ formatPrice(item.unitPrice) }} gil each)</span>
+                  </li>
+                </ul>
+              </article>
+            </div>
+          </v-expand-transition>
         </section>
       </div>
 
       <v-alert v-else type="info" variant="tonal" density="comfortable">
         No prices loaded.
       </v-alert>
-    </v-card-text>
+        </v-card-text>
+      </div>
+    </v-expand-transition>
   </v-card>
 </template>
 
@@ -113,6 +135,7 @@ const props = defineProps({
 
 const marginRule = computed(() => parsePriceMarginInput(props.marginInput))
 const collapsedDatacenters = ref({})
+const isExpanded = ref(true)
 const groupedDcData = computed(() => {
   return transformPriceRowsToDcCards(props.rows, {
     adjustUnitPrice: (pricePerUnit) => adjustUnitPrice(pricePerUnit, marginRule.value),
@@ -141,6 +164,10 @@ function toggleDc(dcName) {
   collapsedDatacenters.value[key] = isDcExpanded(key)
 }
 
+function toggleExpanded() {
+  isExpanded.value = !isExpanded.value
+}
+
 function formatPrice(value) {
   const amount = roundUp(value)
   if (amount === null) {
@@ -159,6 +186,32 @@ function formatPrice(value) {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.expand-body-wrap {
+  overflow: hidden;
+}
+
+.chevron-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s ease;
+}
+
+.chevron-icon.is-up {
+  transform: rotate(180deg);
 }
 
 .remove-dye-option {

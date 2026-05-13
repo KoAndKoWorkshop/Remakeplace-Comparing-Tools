@@ -1339,6 +1339,10 @@
         {
             "name": "Minimalist Poplar Partition Door",
             "price": 9000
+        },
+        {
+            "name": "Standard Spectrum Dye",
+            "price": 216
         }
     ]
 }

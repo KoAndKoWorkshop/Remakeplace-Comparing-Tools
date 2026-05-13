@@ -72,8 +72,8 @@
               v-model:remove-dye-for-pricing="store.removeDyeForPricing"
               v-model:margin-input="store.priceMarginInput"
               @process="processA"
-              @export-teamcraft="store.exportTeamcraft(store.normalizedA)"
-              @get-prices="store.fetchPricesProcessing()"
+              @export-teamcraft="onExportTeamcraftProcessing"
+              @get-prices="onGetPricesProcessing"
               @export-price-csv="store.exportPricePlanCsv()"
             />
 
@@ -97,10 +97,10 @@
               @pick-b="onPickB"
               @process="processCompare"
               @compare="store.compareAB()"
-              @export-teamcraft-b="store.exportTeamcraft(store.normalizedB)"
-              @export-teamcraft-added="store.exportTeamcraft(store.compareResult.toAdd)"
-              @get-prices-b="store.fetchPricesAdvancedB()"
-              @get-prices-compare="store.fetchPricesAdvancedCompare()"
+              @export-teamcraft-b="onExportTeamcraftB"
+              @export-teamcraft-added="onExportTeamcraftAdded"
+              @get-prices-b="onGetPricesAdvancedB"
+              @get-prices-compare="onGetPricesAdvancedCompare"
               @export-price-csv="store.exportPricePlanCsv()"
             />
 
@@ -247,6 +247,30 @@ function onNoticeToggle(open) {
   if (!open) {
     store.clearNotice()
   }
+}
+
+function onExportTeamcraftProcessing(selectedRows) {
+  store.exportTeamcraft(selectedRows)
+}
+
+function onGetPricesProcessing(selectedRows) {
+  store.fetchPricesProcessing(selectedRows)
+}
+
+function onExportTeamcraftB(selectedRows) {
+  store.exportTeamcraft(selectedRows)
+}
+
+function onExportTeamcraftAdded(selectedRows) {
+  store.exportTeamcraft(selectedRows)
+}
+
+function onGetPricesAdvancedB(selectedRows) {
+  store.fetchPricesAdvancedB(selectedRows)
+}
+
+function onGetPricesAdvancedCompare(selectedRows) {
+  store.fetchPricesAdvancedCompare(selectedRows)
 }
 </script>
 

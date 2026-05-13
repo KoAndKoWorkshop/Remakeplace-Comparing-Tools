@@ -305,14 +305,14 @@ export const useMainStore = defineStore('main', {
         this.loading = false
       }
     },
-    async fetchPricesProcessing() {
-      return this.fetchPricesFromItems(this.normalizedA, 'No items in Processing list to price after applying filters.')
+    async fetchPricesProcessing(rawItems = this.normalizedA) {
+      return this.fetchPricesFromItems(rawItems, 'No items in Processing list to price after applying filters.')
     },
-    async fetchPricesAdvancedB() {
-      return this.fetchPricesFromItems(this.normalizedB, 'No items in Item List (B) to price after applying filters.')
+    async fetchPricesAdvancedB(rawItems = this.normalizedB) {
+      return this.fetchPricesFromItems(rawItems, 'No items in Item List (B) to price after applying filters.')
     },
-    async fetchPricesAdvancedCompare() {
-      return this.fetchPricesFromItems(this.compareResult.toAdd, 'No items to add in Compare Result after applying filters.')
+    async fetchPricesAdvancedCompare(rawItems = this.compareResult.toAdd) {
+      return this.fetchPricesFromItems(rawItems, 'No items to add in Compare Result after applying filters.')
     },
     async fetchPricesAdvanced() {
       return this.fetchPricesAdvancedCompare()

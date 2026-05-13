@@ -31,25 +31,26 @@
       title="Item List (A)"
       :rows="normalizedRows"
       :disable-teamcraft-button="loading"
-      @export-teamcraft="$emit('export-teamcraft')"
+      @update:selected-rows="onUpdateSelectedRows"
+      @export-teamcraft="onExportTeamcraft"
     />
 
     <PriceTable
       :rows="priceRows"
       :loading="loading"
-      :can-get-prices="canGetPrices"
+      :can-get-prices="canGetPricesBySelection"
       :remove-dye-for-pricing="removeDyeForPricing"
       :margin-input="marginInput"
       @update:remove-dye-for-pricing="$emit('update:removeDyeForPricing', $event)"
       @update:margin-input="$emit('update:marginInput', $event)"
-      @get-prices="$emit('get-prices')"
+      @get-prices="onGetPrices"
       @export-price-csv="$emit('export-price-csv')"
     />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import NormalizedTable from '@/components/NormalizedTable.vue'
 import PriceTable from '@/components/PriceTable.vue'
 
@@ -102,6 +103,24 @@ const selectedCategoriesModel = computed({
   get: () => props.selectedCategories,
   set: (value) => emit('update:selectedCategories', value)
 })
+
+const selectedRows = ref([])
+
+const canGetPricesBySelection = computed(() => {
+  return props.canGetPrices && selectedRows.value.length > 0
+})
+
+function onUpdateSelectedRows(rows) {
+  selectedRows.value = Array.isArray(rows) ? rows : []
+}
+
+function onExportTeamcraft() {
+  emit('export-teamcraft', selectedRows.value)
+}
+
+function onGetPrices() {
+  emit('get-prices', selectedRows.value)
+}
 </script>
 
 <style scoped>
