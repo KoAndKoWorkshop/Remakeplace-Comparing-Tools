@@ -3,7 +3,17 @@ import { normalizedCompareKey } from '@/utils/key'
 function toMap(list) {
   const map = new Map()
   for (const item of list) {
-    map.set(normalizedCompareKey(item), item)
+    const key = normalizedCompareKey(item)
+    if (!map.has(key)) {
+      map.set(key, item)
+      continue
+    }
+
+    const existing = map.get(key)
+    map.set(key, {
+      ...existing,
+      quantity: Number(existing?.quantity || 0) + Number(item?.quantity || 0)
+    })
   }
   return map
 }
@@ -50,8 +60,21 @@ export function compareLists(left, right) {
   }
 
   for (const [key, leftItem] of leftMap.entries()) {
-    if (!rightMap.has(key)) {
+    const rightItem = rightMap.get(key)
+    if (!rightItem) {
       removed.push(leftItem)
+      continue
+    }
+
+    const leftQty = Number(leftItem?.quantity || 0)
+    const rightQty = Number(rightItem?.quantity || 0)
+
+    // Keep decreases where old list B has more than new list A.
+    if (leftQty > rightQty) {
+      removed.push({
+        ...leftItem,
+        quantity: leftQty - rightQty
+      })
     }
   }
 

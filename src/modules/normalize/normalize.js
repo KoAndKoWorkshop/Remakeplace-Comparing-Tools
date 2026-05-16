@@ -86,6 +86,31 @@ function addDyeItem(map, dyeId, dyeName) {
   })
 }
 
+function collectEntryAndAttachments(rootEntry) {
+  const queue = [rootEntry]
+  const visited = new Set()
+  const entries = []
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (!current || typeof current !== 'object' || visited.has(current)) {
+      continue
+    }
+
+    visited.add(current)
+    entries.push(current)
+
+    const nestedAttachments = [
+      ...(Array.isArray(current?.attachments) ? current.attachments : []),
+      ...(Array.isArray(current?.properties?.attachments) ? current.properties.attachments : [])
+    ]
+
+    queue.push(...nestedAttachments)
+  }
+
+  return entries
+}
+
 export function normalizeReMarket(raw, options = {}) {
   const includeSources = new Set(Array.isArray(options?.includeSources) ? options.includeSources : [
     'interiorFurniture',
@@ -117,19 +142,21 @@ export function normalizeReMarket(raw, options = {}) {
     }
 
     for (const entry of src.list) {
-      const itemId = toNumber(entry?.itemId)
-      if (itemId === 0) {
-        continue
-      }
+      for (const nestedEntry of collectEntryAndAttachments(entry)) {
+        const itemId = toNumber(nestedEntry?.itemId)
+        if (itemId === 0) {
+          continue
+        }
 
-      const color = cleanColorRaw(entry?.properties?.color)
-      const dye = enrichDye(color)
+        const color = cleanColorRaw(nestedEntry?.properties?.color)
+        const dye = enrichDye(color)
 
-      addGroupedItem(grouped, itemId, entry?.name || '')
-      addMaterialItem(grouped, entry)
+        addGroupedItem(grouped, itemId, nestedEntry?.name || '')
+        addMaterialItem(grouped, nestedEntry)
 
-      if (includeSources.has('dye')) {
-        addDyeItem(groupedDyes, dye.dyeId, dye.dyeName)
+        if (includeSources.has('dye')) {
+          addDyeItem(groupedDyes, dye.dyeId, dye.dyeName)
+        }
       }
     }
   }
