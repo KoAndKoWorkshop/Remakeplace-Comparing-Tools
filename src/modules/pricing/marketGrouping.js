@@ -125,7 +125,15 @@ function buildGroupedCardsFromEntries(entries) {
     })
   }
 
-  return datacenters.sort((a, b) => a.dcName.localeCompare(b.dcName))
+  return datacenters.sort((a, b) => {
+    const aOther = a.dcName === 'Other'
+    const bOther = b.dcName === 'Other'
+
+    if (aOther && !bOther) return 1
+    if (!aOther && bOther) return -1
+
+    return a.dcName.localeCompare(b.dcName)
+  })
 }
 
 export function transformPriceRowsToDcCards(priceRows, options = {}) {
