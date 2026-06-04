@@ -37,6 +37,7 @@
 
     <PriceTable
       :rows="priceRows"
+      :no-price-rows="noPriceRows"
       :loading="loading"
       :can-get-prices="canGetPricesBySelection"
       :remove-dye-for-pricing="removeDyeForPricing"
@@ -68,6 +69,10 @@ const props = defineProps({
     default: () => []
   },
   priceRows: {
+    type: Array,
+    default: () => []
+  },
+  noPriceRows: {
     type: Array,
     default: () => []
   },

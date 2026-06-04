@@ -5,6 +5,15 @@ import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 export default defineConfig({
   base: '/Remakeplace-Comparing-Tools/',
+  server: {
+    proxy: {
+      '/universalis-proxy': {
+        target: 'https://universalis.app',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/universalis-proxy/, '')
+      }
+    }
+  },
   plugins: [
     vue({
       template: {

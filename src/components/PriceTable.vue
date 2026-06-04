@@ -97,6 +97,24 @@
       <v-alert v-else type="info" variant="tonal" density="comfortable">
         No prices loaded.
       </v-alert>
+
+      <div v-if="noPriceRows.length" class="no-price-section mt-4">
+        <div class="no-price-header">No Price Data</div>
+        <table class="no-price-table">
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in noPriceRows" :key="row.itemId || row.itemName">
+              <td>{{ row.itemName }}</td>
+              <td>{{ row.requiredQuantity }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
         </v-card-text>
       </div>
     </v-expand-transition>
@@ -130,6 +148,10 @@ const props = defineProps({
   marginInput: {
     type: String,
     default: '5%'
+  },
+  noPriceRows: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -327,5 +349,37 @@ function formatPrice(value) {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.no-price-section {
+  border: 1px solid rgba(255, 180, 50, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 180, 50, 0.05);
+}
+
+.no-price-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffb432;
+  margin-bottom: 8px;
+}
+
+.no-price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.no-price-table th,
+.no-price-table td {
+  text-align: left;
+  padding: 4px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.no-price-table th {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
 }
 </style>

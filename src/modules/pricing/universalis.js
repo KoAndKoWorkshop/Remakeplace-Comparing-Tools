@@ -80,6 +80,15 @@ function splitChunks(arr, size) {
   return chunks
 }
 
+function toPositiveIntegerOrZero(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) {
+    return 0
+  }
+
+  return Math.ceil(n)
+}
+
 function normalizeTargets(targets) {
   if (Array.isArray(targets)) {
     return Array.from(
@@ -140,6 +149,10 @@ function mergePayloads(payloads) {
 }
 
 export async function fetchUniversalisPrices(targets, requiredItems) {
+  const apiBase = import.meta.env.DEV
+    ? '/universalis-proxy/api/v2'
+    : 'https://universalis.app/api/v2'
+
   const cleanTargets = normalizeTargets(targets)
   if (!cleanTargets.length) {
     throw new Error('At least one datacenter is required.')
@@ -165,10 +178,22 @@ export async function fetchUniversalisPrices(targets, requiredItems) {
   const rows = []
 
   for (const chunk of chunks) {
+    const listingsLimit = chunk.reduce((max, id) => {
+      const itemMaxRequired = requirements
+        .filter((item) => item.itemId === id)
+        .reduce((itemMax, item) => Math.max(itemMax, toPositiveIntegerOrZero(item.requiredQuantity)), 0)
+
+      return Math.max(max, itemMaxRequired)
+    }, 0)
+
     const itemsById = new Map()
 
     for (const target of cleanTargets) {
-      const url = `https://universalis.app/api/v2/${encodeURIComponent(target)}/${chunk.join(',')}`
+      const searchParams = new URLSearchParams({
+        listings: String(listingsLimit),
+        entries: '0'
+      })
+      const url = `${apiBase}/${encodeURIComponent(target)}/${chunk.join(',')}?${searchParams.toString()}`
       const response = await fetch(url)
 
       if (!response.ok) {

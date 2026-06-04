@@ -71,6 +71,7 @@ export const useMainStore = defineStore('main', {
     removeDyeForPricing: false,
     priceMarginInput: '5%',
     priceRows: [],
+    noPriceRows: [],
     loading: false,
     error: '',
     notice: ''
@@ -92,6 +93,7 @@ export const useMainStore = defineStore('main', {
       this.removeDyeForPricing = false
       this.priceMarginInput = '5%'
       this.priceRows = []
+      this.noPriceRows = []
       this.loading = false
       this.error = ''
       this.notice = ''
@@ -201,6 +203,7 @@ export const useMainStore = defineStore('main', {
         this.loading = true
         this.clearError()
         this.clearNotice()
+        this.noPriceRows = []
 
         const safeItems = Array.isArray(rawItems) ? rawItems : []
         const sourceItems = this.removeDyeForPricing
@@ -271,6 +274,7 @@ export const useMainStore = defineStore('main', {
 
         if (!marketRequirements.length) {
           this.priceRows = npcPriceRows
+          this.noPriceRows = []
           this.notice = 'Prices loaded successfully.'
           return
         }
@@ -283,8 +287,11 @@ export const useMainStore = defineStore('main', {
           this.notice = `Getting prices... attempt ${attempt}/${maxAttempts}`
 
           try {
-            const marketRows = await fetchUniversalisPrices(this.selectedMarketTargets, marketRequirements)
+            const allMarketRows = await fetchUniversalisPrices(this.selectedMarketTargets, marketRequirements)
+            const marketRows = allMarketRows.filter((row) => row.purchasePlanRows && row.purchasePlanRows.length > 0)
+            const noDataRows = allMarketRows.filter((row) => !row.purchasePlanRows || row.purchasePlanRows.length === 0)
             this.priceRows = [...npcPriceRows, ...marketRows]
+            this.noPriceRows = noDataRows
             this.notice = 'Prices loaded successfully.'
             return
           } catch (error) {
